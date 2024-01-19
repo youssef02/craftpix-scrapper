@@ -1,3 +1,4 @@
 
 config.json
 assets/
+.DS_Store
