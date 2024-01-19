@@ -6,8 +6,17 @@ from selenium.common.exceptions import NoSuchElementException
 from tabulate import tabulate
 import textwrap
 import json
+import traceback
+import os
+# Get the current working directory
+current_directory = os.getcwd()
 
-driver = webdriver.Chrome()
+chrome_options = webdriver.ChromeOptions()
+prefs = {'download.default_directory': current_directory+'/assets'}
+chrome_options.add_experimental_option('prefs', prefs)
+
+# Instantiate a Chrome browser with the configured options
+driver = webdriver.Chrome(options=chrome_options)
 
 def truncate_text(text, max_length=30):
     return textwrap.shorten(text, width=max_length, placeholder="...")
@@ -55,7 +64,7 @@ def collect_data():
     wait_for_element(driver, By.XPATH, '//*[@id="wrap"]/section/main')
 
     page_num = 1
-    page_limit = 4
+    page_limit = 97
     data = {}  # Initialize data here
     while True:
         try:
@@ -78,7 +87,7 @@ def collect_data():
         except Exception as e:
             print(f"Exception: {str(e)}")
             #print stack trace
-            import traceback
+
             traceback.print_exc()
 
             print("An error occurred during navigation or data extraction.")
@@ -96,8 +105,84 @@ def collect_data():
     with open('data.json', 'w') as outfile:
         json.dump(data, outfile, indent=4)
 
+def download_data():
+    #load json data
+    data = {}
+    with open('data.json') as json_file:
+        data = json.load(json_file)
+
+    #load login info from config.json
+    login_info = {}
+    with open('config.json') as json_file:
+        login_info = json.load(json_file)
+    
+    #login
+    driver.get('https://craftpix.net/my-account/')
+
+    #add username email
+    username_input = driver.find_element(By.ID, 'username')
+    username_input.send_keys(login_info['username'])
+
+    #add password
+    password_input = driver.find_element(By.ID, 'password')
+    password_input.send_keys(login_info['password'])
+
+
+    #login button
+    login_button = driver.find_element(By.NAME, 'login')
+    login_button.click()
+
+    #wait for login
+    driver.implicitly_wait(10)
+
+    test = False
+    if test:
+        #go to first page
+        driver.get(data['1'][0]['Link'])
+        #wait for page to load
+        driver.implicitly_wait(2)
+        #download button
+        download_button = driver.find_element(By.XPATH, '//*[@id="commerce_unit"]/div/a')
+
+        #get href
+        href = download_button.get_attribute('href')
+        driver.get(href)
+        
+    
+        #wait for terminal input
+        input("Press enter to continue...")
+        exit()
+
+    #for each page in data get the links and go to the page
+    for page in data:
+        print("Downloading page:", page)
+
+        for item in data[page]:
+            print("Downloading item:", item['Title'])
+            driver.get(item['Link'])
+            #wait for page to load
+            driver.implicitly_wait(2)
+            #download button
+            download_button = driver.find_element(By.XPATH, '//*[@id="commerce_unit"]/div/a')
+
+            #get href
+            href = download_button.get_attribute('href')
+            driver.get(href)
+            driver.implicitly_wait(5)
+            
+            
+
+            
+
+
+
+
+    pass
+
 if __name__ == "__main__":
-    collect_data()
+    #collect_data()
+    
+    download_data()
     # Exit after collecting data to prevent the following code from running
     exit()
 
